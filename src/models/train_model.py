@@ -103,6 +103,8 @@ def initialize_model(num_classes, feature_extract, use_pretrained=True):
 
 
 def main():
+    # TODO: Move code that structures data to the appropriate script
+    # TODO: How to save a newly trained model?
     base_fp = "../../data/external/hymenoptera_data"
 
     num_classes = 2
@@ -162,6 +164,8 @@ def main():
     # Train and evaluate
     model_ft, hist = train_model(model_ft, dataloaders_dict, criterion, optimizer_ft, num_epochs=num_epochs,
                                  is_inception=False, device=device)
+
+    torch.save(model_ft.state_dict(), '../../models/densenet-121')
 
     hist = [h.cpu().numpy() for h in hist]
 

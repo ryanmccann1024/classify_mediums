@@ -11,6 +11,9 @@ import os
 import copy
 
 
+# TODO: Change to DenseNet-161
+
+
 def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_inception=False, device=None):
     since = time.time()
 
@@ -92,7 +95,7 @@ def set_parameter_requires_grad(model, feature_extracting):
 
 
 def initialize_model(num_classes, feature_extract, use_pretrained=True):
-    # Specific to Densenet
+    # Specific to Densenet-121 (Not actually sure if it's only for 121 in this block of code)
     model_ft = models.densenet121(pretrained=use_pretrained)
     set_parameter_requires_grad(model_ft, feature_extract)
     num_ftrs = model_ft.classifier.in_features
@@ -103,8 +106,6 @@ def initialize_model(num_classes, feature_extract, use_pretrained=True):
 
 
 def main():
-    # TODO: Move code that structures data to the appropriate script
-    # TODO: How to save a newly trained model?
     base_fp = "../../data/external/hymenoptera_data"
 
     num_classes = 2

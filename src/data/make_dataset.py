@@ -1,12 +1,22 @@
 import os
 import requests
-import shutil
 import time
 
 import pandas as pd
 
 DATA_FP = '../../data'
 MEDIUMS = ['oil', 'watercolor', 'pastel', 'pencil', 'tempera']
+HEADERS = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) '
+                         'Chrome/50.0.2661.102 Safari/537.36'}
+
+
+# TODO: Save photos by something more descriptive
+
+# TODO: Things we'd like to analyze
+#   Number of mediums (If we don't have as high of an accuracy, we do have stats for other mediums?)
+#   Number of artists
+#   When the artwork was created? Newer vs. older artwork may have an effect?
+#   How many samples in your dataset that you have
 
 
 def create_dir(des_fp: str):
@@ -25,7 +35,21 @@ def create_dir(des_fp: str):
             os.mkdir(curr_path)
 
 
-def detect_medium(raw_medium: str):
+def handle_image_data(url, save_fp, image_name):
+    """
+    Retrieves an image from the World Wide Web given a URL.
+    """
+    image_data = requests.get(url, headers=HEADERS)
+    time.sleep(0.1)
+
+    if image_data.status_code == 200:
+        create_dir(save_fp)
+        with open(f"{save_fp}/{image_name}.jpg",
+                  'wb') as file_obj:
+            file_obj.write(image_data.content)
+
+
+def handle_medium(raw_medium: str):
     """
     Given a sentence describing the medium used, identify the medium and make it one word.
     """
@@ -45,8 +69,15 @@ def clean_string(dirty_str: str):
     """
     Formats a string to snakecase.
     """
-    clean_str = dirty_str.lower().replace(',', '').replace(' ', '_')
+    clean_str = dirty_str.lower().replace(',', '').replace(' ', '_').replace('.', '').replace('-', '_').replace("'", '')
     return clean_str
+
+
+def handle_wiki_art():
+    """
+    Structure the WikiArt dataset.
+    """
+    pass
 
 
 def handle_modern_art():
@@ -54,31 +85,63 @@ def handle_modern_art():
     Structure the museum of modern art dataset.
     """
     csv = pd.read_csv(f'{DATA_FP}/external/Artworks.csv')
-    headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) '
-                             'Chrome/50.0.2661.102 Safari/537.36'}
 
     for i, row in csv.iterrows():
-        medium = detect_medium(row['Medium'])
+        medium = handle_medium(row['Medium'])
 
         if medium is not False:
             url = row['ThumbnailURL']
-            if str(url) == 'nan':
-                continue
+            # TODO: Update
+            handle_image_data(url=url, save_fp='', image_name='')
 
-            image_data = requests.get(url, headers=headers)
-            time.sleep(0.1)
-            if image_data.status_code == 200:
-                create_dir(f'{DATA_FP}/processed/moma/{medium}')
+        if i % 100 == 0:
+            print(f'{i} iterations completed out of {len(csv)}')
 
-                with open(f'{DATA_FP}/processed/moma/{medium}/{i}.jpg', 'wb') as file_obj:
-                    file_obj.write(image_data.content)
+
+def handle_national_goa():
+    """
+    Structure the National Gallery of Art's dataset.
+    """
+    images_csv = pd.read_csv(f'{DATA_FP}/external/published_images.csv')
+    info_csv = pd.read_csv(f'{DATA_FP}/external/objects.csv')
+
+    info_dict = dict()
+    for i, row in info_csv.iterrows():
+        medium = handle_medium(row['medium'])
+
+        if medium is not False:
+            obj_id = row['objectid']
+            info_dict[obj_id] = row.to_dict()
+            info_dict[obj_id]['medium'] = medium
+            info_dict[obj_id].pop('objectid')
+
+        if i % 100 == 0:
+            print(f'{i} iterations completed out of {len(info_csv)}')
+
+    print('\n')
+
+    for i, row in images_csv.iterrows():
+        obj_id = row['depictstmsobjectid']
+        if obj_id in info_dict.keys():
+            url = row['iiifthumburl']
+            save_fp = f"{DATA_FP}/processed/national_goa/{info_dict[obj_id]['medium']}"
+            artist = clean_string(info_dict[obj_id]['attribution'])
+            year = str(info_dict[obj_id]['endyear']).split('.')[0]
+
+            image_name = f'{artist}_{year}'
+
+            handle_image_data(url, save_fp, image_name)
+
+        if i % 100 == 0:
+            print(f'{i} iterations completed out of {len(info_csv)}')
 
 
 def main():
     """
     Controls this script.
     """
-    handle_modern_art()
+    # handle_modern_art()
+    handle_national_goa()
 
 
 if __name__ == '__main__':

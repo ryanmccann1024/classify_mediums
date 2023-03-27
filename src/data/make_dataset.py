@@ -79,6 +79,7 @@ def handle_wiki_art():
     """
     Structure the WikiArt dataset.
     """
+    # TODO: Probably will end up resizing the tensors, still need labels?
     pass
 
 
@@ -87,6 +88,8 @@ def handle_modern_art():
     Structure the museum of modern art dataset.
     """
     csv = pd.read_csv(f'{DATA_FP}/external/Artworks.csv')
+    # TODO: Change
+    csv = csv[85100:]
 
     for i, row in csv.iterrows():
         medium = handle_medium(row['Medium'])
@@ -107,6 +110,8 @@ def handle_modern_art():
                 year = year.split(' ')[0]
             year = year.strip('(').strip(')')
 
+            if '/' in artist:
+                artist = artist.split('/')[1]
             image_name = f'{artist}_{year}'
             handle_image_data(url, save_fp, image_name)
 
@@ -193,7 +198,7 @@ def main():
     """
     Controls this script.
     """
-    handle_modern_art()
+    # handle_modern_art()
     handle_national_goa()
     # make_data_split()
 

@@ -1,6 +1,8 @@
 import os
 import requests
 import time
+import random
+import shutil
 
 import pandas as pd
 
@@ -91,8 +93,22 @@ def handle_modern_art():
 
         if medium is not False:
             url = row['ThumbnailURL']
-            # TODO: Update
-            handle_image_data(url=url, save_fp='', image_name='')
+            if str(url) == 'nan':
+                continue
+
+            save_fp = f"{DATA_FP}/processed/modern_art/{medium}"
+            artist = clean_string(row['Artist'])
+
+            year = row['EndDate']
+            if year == '(0)':
+                year = row['BeginDate']
+            # There were multiple years in some of these?
+            if len(year) > 6:
+                year = year.split(' ')[0]
+            year = year.strip('(').strip(')')
+
+            image_name = f'{artist}_{year}'
+            handle_image_data(url, save_fp, image_name)
 
         if i % 100 == 0:
             print(f'{i} iterations completed out of {len(csv)}')
@@ -129,19 +145,57 @@ def handle_national_goa():
             year = str(info_dict[obj_id]['endyear']).split('.')[0]
 
             image_name = f'{artist}_{year}'
-
             handle_image_data(url, save_fp, image_name)
 
         if i % 100 == 0:
             print(f'{i} iterations completed out of {len(info_csv)}')
 
 
+def copy_images(src, dest, image_list):
+    """
+    Copies an image from source directory to a destination directory.
+    """
+    create_dir(dest)
+    for image_name in image_list:
+        shutil.copy(f'{src}/{image_name}', f'{dest}/{image_name}')
+
+
+def make_data_split():
+    """
+    Creates the training, validation, and testing data sets.
+    """
+    des_dirs = ['modern_art', 'national_goa']
+    check_dict = dict()
+    for curr_dir in des_dirs:
+        mediums = [medium for medium in os.listdir(f'{DATA_FP}/processed/{curr_dir}')]
+        check_dict[curr_dir] = dict()
+        for curr_medium in mediums:
+            medium_path = f'{DATA_FP}/processed/{curr_dir}/{curr_medium}'
+            images = [image for image in os.listdir(medium_path)]
+            random.shuffle(images)
+
+            check_dict[curr_dir][curr_medium] = len(images)
+
+            # # 1,000 images for each medium for training
+            # train_lst = images[0:1000]
+            # # Validation data will be 20% of 1000
+            # val_lst = images[1000:1200]
+            # # Testing data will be 10% of 1000
+            # test_lst = images[1200:1300]
+            #
+            # copy_images(medium_path, f'{DATA_FP}/processed/v1/train/{curr_medium}', train_lst)
+            # copy_images(medium_path, f'{DATA_FP}/processed/v1/val/{curr_medium}', val_lst)
+            # copy_images(medium_path, f'{DATA_FP}/processed/v1/test/{curr_medium}', test_lst)
+    print("Finished")
+
+
 def main():
     """
     Controls this script.
     """
-    # handle_modern_art()
+    handle_modern_art()
     handle_national_goa()
+    # make_data_split()
 
 
 if __name__ == '__main__':

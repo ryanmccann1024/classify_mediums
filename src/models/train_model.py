@@ -11,7 +11,7 @@ import os
 import copy
 
 
-# TODO: Change to DenseNet-161
+# TODO: Change to DenseNet-161 eventually
 
 
 def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_inception=False, device=None):
@@ -106,9 +106,11 @@ def initialize_model(num_classes, feature_extract, use_pretrained=True):
 
 
 def main():
+    # TODO: To be changed
     base_fp = "../../data/external/hymenoptera_data"
 
-    num_classes = 2
+    num_classes = 5
+    # TODO: We definitely want to change these parameters in the future
     batch_size = 8
     num_epochs = 15
     feature_extract = True
@@ -157,6 +159,7 @@ def main():
                 print("\t", name)
 
     # Observe that all parameters are being optimized
+    # TODO: I wonder if we'll change learning rate and momnetum eventually?
     optimizer_ft = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
 
     # Set up the loss function
@@ -166,8 +169,10 @@ def main():
     model_ft, hist = train_model(model_ft, dataloaders_dict, criterion, optimizer_ft, num_epochs=num_epochs,
                                  is_inception=False, device=device)
 
+    # TODO: Pathway to change
     torch.save(model_ft.state_dict(), '../../models/densenet-121')
 
+    # TODO: We should probably save these results somewhere so we'll always have access to it
     hist = [h.cpu().numpy() for h in hist]
 
     plt.title("Validation Accuracy vs. Number of Training Epochs")

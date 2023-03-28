@@ -3,6 +3,7 @@ import requests
 import time
 import random
 import shutil
+import math
 
 import pandas as pd
 
@@ -88,8 +89,6 @@ def handle_modern_art():
     Structure the museum of modern art dataset.
     """
     csv = pd.read_csv(f'{DATA_FP}/external/Artworks.csv')
-    # TODO: Change
-    csv = csv[85100:]
 
     for i, row in csv.iterrows():
         medium = handle_medium(row['Medium'])
@@ -123,7 +122,8 @@ def handle_national_goa():
     """
     Structure the National Gallery of Art's dataset.
     """
-    images_csv = pd.read_csv(f'{DATA_FP}/external/published_images.csv')
+    # TODO: Change
+    images_csv = pd.read_csv(f'{DATA_FP}/external/published_images.csv')[34200:]
     info_csv = pd.read_csv(f'{DATA_FP}/external/objects.csv')
 
     info_dict = dict()
@@ -179,19 +179,22 @@ def make_data_split():
             images = [image for image in os.listdir(medium_path)]
             random.shuffle(images)
 
-            check_dict[curr_dir][curr_medium] = len(images)
+            # (About) eighty percent of the images shall go to training
+            curr_len = len(images)
 
-            # # 1,000 images for each medium for training
-            # train_lst = images[0:1000]
-            # # Validation data will be 20% of 1000
-            # val_lst = images[1000:1200]
-            # # Testing data will be 10% of 1000
-            # test_lst = images[1200:1300]
-            #
-            # copy_images(medium_path, f'{DATA_FP}/processed/v1/train/{curr_medium}', train_lst)
-            # copy_images(medium_path, f'{DATA_FP}/processed/v1/val/{curr_medium}', val_lst)
-            # copy_images(medium_path, f'{DATA_FP}/processed/v1/test/{curr_medium}', test_lst)
-    print("Finished")
+            first_slice = int(math.floor(curr_len * 0.8))
+            train_lst = images[0:first_slice]
+
+            # (About) ten percent of the images shall go to validation
+            second_slice = int(first_slice + (math.floor(curr_len * 0.1)))
+            val_lst = images[first_slice:second_slice]
+
+            # The rest of the images will go to testing (should be around ten percent)
+            test_lst = images[second_slice:]
+
+            copy_images(medium_path, f'{DATA_FP}/processed/v1/train/{curr_medium}', train_lst)
+            copy_images(medium_path, f'{DATA_FP}/processed/v1/val/{curr_medium}', val_lst)
+            copy_images(medium_path, f'{DATA_FP}/processed/v1/test/{curr_medium}', test_lst)
 
 
 def main():
@@ -199,8 +202,8 @@ def main():
     Controls this script.
     """
     # handle_modern_art()
-    handle_national_goa()
-    # make_data_split()
+    # handle_national_goa()
+    make_data_split()
 
 
 if __name__ == '__main__':

@@ -119,7 +119,7 @@ def main():
 
     num_classes = 5
     batch_size = 8
-    num_epochs = 10
+    num_epochs = 50
     learn_rate = 0.001
     momentum = 0.9
     version = 1
@@ -188,7 +188,13 @@ def main():
         'train_acc': train_acc,
         'train_loss': train_loss,
         'val_acc': val_acc,
-        'val_loss': val_loss
+        'val_loss': val_loss,
+        'hyperparams': {
+            'epochs': num_epochs,
+            'batch_size': batch_size,
+            'learning_rate': learn_rate,
+            'momentum': momentum,
+        }
     }
 
     with open(f'../../data/processed/v{version}/train_output_v{version}.json', 'w') as file_obj:

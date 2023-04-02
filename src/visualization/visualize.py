@@ -1,26 +1,45 @@
+import json
+
 import matplotlib.pyplot as plt
-import numpy as np
+
+with open('../../data/processed/v1/train_output_v1.json', 'r') as file_obj:
+    DES_DATA = json.load(file_obj)
+
+LEGEND_LABELS = ['Train', 'Validation', 'Testing']
+STEP = 1
+VERSION = 1
 
 
-def plot_loss():
+def plot_setup(plot_type='train_acc'):
+    plt.figure(figsize=(7, 5), dpi=300)
+    plt.grid()
+
+    if plot_type == 'train_acc':
+        plt.title("Training & Validation Accuracy vs. Number of Epochs")
+        plt.xlabel("Epochs")
+        plt.ylabel("Accuracy")
+
+
+def plot_train_loss(data_matrix, epochs, step=5):
     pass
 
 
-def plot_acc(data_matrix, epochs):
-    legend_labels = ['Train', 'Validation', 'Testing']
-    plt.figure(figsize=(7, 5), dpi=300)
-    plt.title("Training & Validation Accuracy vs. Number of Epochs")
-    plt.grid()
-    plt.xlabel("Epochs")
-    plt.ylabel("Accuracy")
+def plot_train_acc():
+    epoch_labels = [epoch for epoch in range(0, len(DES_DATA['train_acc']), STEP)]
 
-    step = 50
-    x_ticks = [tick for tick in range(0, epochs + step, step)]
-    epoch_lst = [epoch for epoch in range(0, epochs)]
-    for i, curr_lst in enumerate(data_matrix):
-        plt.plot(epoch_lst, curr_lst, label=legend_labels[i])
+    for key, data_lst in DES_DATA.items():
+        if 'acc' in key:
+            label = key.split('_')[0].title()
+            plt.plot(epoch_labels, data_lst, label=label)
 
     plt.ylim((0, 1.))
-    plt.xticks(x_ticks)
+    plt.xlim(epoch_labels[0], epoch_labels[-1])
+    plt.xticks(epoch_labels)
     plt.legend()
-    plt.show()
+    plt.savefig(f'./train_acc_v{VERSION}.png')
+    # plt.show()
+
+
+if __name__ == '__main__':
+    plot_setup()
+    plot_train_acc()

@@ -7,11 +7,11 @@ from torchvision import datasets, models, transforms
 import time
 import os
 import copy
-
-from src.visualization import visualize
+import json
 
 
 # TODO: Run DenseNet-161
+# TODO: Reference this code from the docs
 
 
 def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_inception=False, device=None):
@@ -115,13 +115,14 @@ def initialize_model(num_classes, feature_extract, use_pretrained=True):
 
 
 def main():
-    base_fp = "../../data/external/hymenoptera_data"
+    base_fp = "../../data/processed/v1"
 
     num_classes = 5
     batch_size = 8
-    num_epochs = 1000
+    num_epochs = 10
     learn_rate = 0.001
     momentum = 0.9
+    version = 1
     feature_extract = True
 
     model_ft, input_size = initialize_model(num_classes, feature_extract, use_pretrained=False)
@@ -177,14 +178,21 @@ def main():
     model_ft, resp_lst = train_model(model_ft, dataloaders_dict, criterion, optimizer_ft, num_epochs=num_epochs,
                                      is_inception=False, device=device)
 
-    # TODO: Save this data, then load it from the plot with a version number or something
-    train_acc = [num.cpu().numpy() for num in resp_lst[0]]
-    # train_loss = [num.cpu().numpy() for num in resp_lst[1]]
-    val_acc = [num.cpu().numpy() for num in resp_lst[2]]
-    # val_loss = [num.cpu().numpy() for num in resp_lst[3]]
-    torch.save(model_ft.state_dict(), '../../models/densenet-121_v1')
+    train_acc = [num.cpu().tolist() for num in resp_lst[0]]
+    train_loss = resp_lst[1]
+    val_acc = [num.cpu().tolist() for num in resp_lst[2]]
+    val_loss = resp_lst[3]
+    torch.save(model_ft.state_dict(), f'../../models/densenet-121_v{version}')
 
-    visualize.plot_acc([train_acc, val_acc], num_epochs)
+    res_dict = {
+        'train_acc': train_acc,
+        'train_loss': train_loss,
+        'val_acc': val_acc,
+        'val_loss': val_loss
+    }
+
+    with open(f'../../data/processed/v{version}/train_output_v{version}.json', 'w') as file_obj:
+        json.dump(res_dict, file_obj)
 
 
 if __name__ == '__main__':

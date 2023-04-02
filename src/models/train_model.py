@@ -3,24 +3,29 @@ from __future__ import division
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import numpy as np
 from torchvision import datasets, models, transforms
-import matplotlib.pyplot as plt
 import time
 import os
 import copy
 
+from src.visualization import visualize
 
-# TODO: Change to DenseNet-161 eventually
+
+# TODO: Run DenseNet-161
 
 
 def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_inception=False, device=None):
     since = time.time()
 
-    val_acc_history = []
+    train_acc = list()
+    val_acc = list()
+    # Best validation accuracy
+    best_acc = 0.0
+
+    train_loss = list()
+    val_loss = list()
 
     best_model_wts = copy.deepcopy(model.state_dict())
-    best_acc = 0.0
 
     for epoch in range(num_epochs):
         print('Epoch {}/{}'.format(epoch, num_epochs - 1))
@@ -75,7 +80,11 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
                 best_acc = epoch_acc
                 best_model_wts = copy.deepcopy(model.state_dict())
             if phase == 'val':
-                val_acc_history.append(epoch_acc)
+                val_acc.append(epoch_acc)
+                val_loss.append(epoch_loss)
+            else:
+                train_acc.append(epoch_acc)
+                train_loss.append(epoch_loss)
 
         print()
 
@@ -85,7 +94,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
 
     # load best model weights
     model.load_state_dict(best_model_wts)
-    return model, val_acc_history
+    return model, [train_acc, train_loss, val_acc, val_loss]
 
 
 def set_parameter_requires_grad(model, feature_extracting):
@@ -106,16 +115,16 @@ def initialize_model(num_classes, feature_extract, use_pretrained=True):
 
 
 def main():
-    # TODO: To be changed
     base_fp = "../../data/external/hymenoptera_data"
 
     num_classes = 5
-    # TODO: We definitely want to change these parameters in the future
     batch_size = 8
-    num_epochs = 15
+    num_epochs = 1000
+    learn_rate = 0.001
+    momentum = 0.9
     feature_extract = True
 
-    model_ft, input_size = initialize_model(num_classes, feature_extract, use_pretrained=True)
+    model_ft, input_size = initialize_model(num_classes, feature_extract, use_pretrained=False)
 
     data_transforms = {
         'train': transforms.Compose([
@@ -159,30 +168,23 @@ def main():
                 print("\t", name)
 
     # Observe that all parameters are being optimized
-    # TODO: I wonder if we'll change learning rate and momnetum eventually?
-    optimizer_ft = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
+    optimizer_ft = optim.SGD(params_to_update, lr=learn_rate, momentum=momentum)
 
     # Set up the loss function
     criterion = nn.CrossEntropyLoss()
 
     # Train and evaluate
-    model_ft, hist = train_model(model_ft, dataloaders_dict, criterion, optimizer_ft, num_epochs=num_epochs,
-                                 is_inception=False, device=device)
+    model_ft, resp_lst = train_model(model_ft, dataloaders_dict, criterion, optimizer_ft, num_epochs=num_epochs,
+                                     is_inception=False, device=device)
 
-    # TODO: Pathway to change
-    torch.save(model_ft.state_dict(), '../../models/densenet-121')
+    # TODO: Save this data, then load it from the plot with a version number or something
+    train_acc = [num.cpu().numpy() for num in resp_lst[0]]
+    # train_loss = [num.cpu().numpy() for num in resp_lst[1]]
+    val_acc = [num.cpu().numpy() for num in resp_lst[2]]
+    # val_loss = [num.cpu().numpy() for num in resp_lst[3]]
+    torch.save(model_ft.state_dict(), '../../models/densenet-121_v1')
 
-    # TODO: We should probably save these results somewhere so we'll always have access to it
-    hist = [h.cpu().numpy() for h in hist]
-
-    plt.title("Validation Accuracy vs. Number of Training Epochs")
-    plt.xlabel("Training Epochs")
-    plt.ylabel("Validation Accuracy")
-    plt.plot(range(1, num_epochs + 1), hist, label="Pretrained")
-    plt.ylim((0, 1.))
-    plt.xticks(np.arange(1, num_epochs + 1, 1.0))
-    plt.legend()
-    plt.show()
+    visualize.plot_acc([train_acc, val_acc], num_epochs)
 
 
 if __name__ == '__main__':

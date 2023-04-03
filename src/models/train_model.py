@@ -115,11 +115,11 @@ def initialize_model(num_classes, feature_extract, use_pretrained=True):
 
 
 def main():
-    base_fp = "../../data/processed/v1"
+    base_fp = "../../data/external/hymenoptera_data"
 
-    num_classes = 5
+    num_classes = 2
     batch_size = 8
-    num_epochs = 50
+    num_epochs = 5
     learn_rate = 0.001
     momentum = 0.9
     version = 1
@@ -182,7 +182,8 @@ def main():
     train_loss = resp_lst[1]
     val_acc = [num.cpu().tolist() for num in resp_lst[2]]
     val_loss = resp_lst[3]
-    torch.save(model_ft.state_dict(), f'../../models/densenet-121_v{version}')
+    # torch.save(model_ft.state_dict(), f'../../models/densenet-121_v{version}')
+    torch.save(model_ft.state_dict(), f'../../models/check')
 
     res_dict = {
         'train_acc': train_acc,
@@ -197,8 +198,8 @@ def main():
         }
     }
 
-    with open(f'../../data/processed/v{version}/train_output_v{version}.json', 'w') as file_obj:
-        json.dump(res_dict, file_obj)
+    # with open(f'../../data/processed/v{version}/train_output_v{version}.json', 'w') as file_obj:
+    #     json.dump(res_dict, file_obj)
 
 
 if __name__ == '__main__':

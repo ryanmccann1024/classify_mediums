@@ -13,8 +13,9 @@ import copy
 
 # TODO: Need optimizer actually
 # TODO: We want something like a matrix to show what it classified as (like the paper)
-def test_model(model, dataloaders, optimizer, criterion, device=None):
+def test_model(model, dataloaders, criterion, device=None):
     test_acc_history = []
+    test_loss_history = []
     best_acc = 0.0
     model.eval()
 
@@ -26,38 +27,53 @@ def test_model(model, dataloaders, optimizer, criterion, device=None):
         inputs = inputs.to(device)
         labels = labels.to(device)
 
-        # Zero the parameter gradients
-        optimizer.zero_grad()
+        # TODO: Do I need to Zero the parameter gradients as in training? (See the training script)
 
         outputs = model(inputs)
         loss = criterion(outputs, labels)
 
         _, preds = torch.max(outputs, 1)
 
-        # TODO: We want the label, and the predicted label in a dictionary of some sort
         running_loss += loss.item() * inputs.size(0)
         running_corrects += torch.sum(preds == labels.data)
 
-        # TODO: We eventually don't want any of this for here on down
         curr_loss = running_loss / len(dataloaders['test'].dataset)
         curr_acc = running_corrects.double() / len(dataloaders['test'].dataset)
 
         # deep copy the model
         if curr_acc > best_acc:
             best_acc = curr_acc
-            best_model_wts = copy.deepcopy(model.state_dict())
 
         test_acc_history.append(curr_acc)
+        test_loss_history.append(curr_loss)
+
+
+def set_parameter_requires_grad(model, feature_extracting):
+    if feature_extracting:
+        for param in model.parameters():
+            param.requires_grad = False
+
+
+def initialize_model(num_classes, feature_extract, use_pretrained=True):
+    # Specific to Densenet-121 (Not actually sure if it's only for 121 in this block of code)
+    model_ft = models.densenet121(pretrained=use_pretrained)
+    set_parameter_requires_grad(model_ft, feature_extract)
+    num_ftrs = model_ft.classifier.in_features
+    model_ft.classifier = nn.Linear(num_ftrs, num_classes)
+
+    return model_ft
 
 
 def main():
-    # TODO: Change
     test_fp = "../../data/external/hymenoptera_data"
 
     batch_size = 8
+    num_classes = 2
+    feature_extract = False
 
-    # TODO: Load model
-    model_ft = None
+    # TODO: What is feature extract again?
+    model_ft = initialize_model(num_classes, feature_extract, use_pretrained=False)
+    model_ft.load_state_dict(torch.load('../../models/check'))
     input_size = 224
 
     data_transforms = {

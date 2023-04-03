@@ -7,7 +7,7 @@ with open('../../data/processed/v1/train_output_v1.json', 'r') as file_obj:
     DES_DATA = json.load(file_obj)
 
 LEGEND_LABELS = ['Train', 'Validation', 'Testing']
-STEP = 1
+STEP = 10
 VERSION = 1
 
 
@@ -82,12 +82,13 @@ def plot_train_loss():
     """
     Plot loss related to training, this includes the validation loss.
     """
+    epochs = [epoch for epoch in range(0, len(DES_DATA['train_loss']))]
     epoch_labels = [epoch for epoch in range(0, len(DES_DATA['train_loss']), STEP)]
 
     for key, data_lst in DES_DATA.items():
         if 'loss' in key:
             label = key.split('_')[0].title()
-            plt.plot(epoch_labels, data_lst, label=label)
+            plt.plot(epochs, data_lst, label=label)
 
     plt.ylim((0, 1.))
     plt.xlim(epoch_labels[0], epoch_labels[-1])
@@ -100,12 +101,13 @@ def plot_train_acc():
     """
     Plot accuracy related to training, this included validation in the accuracy.
     """
+    epochs = [epoch for epoch in range(0, len(DES_DATA['train_acc']))]
     epoch_labels = [epoch for epoch in range(0, len(DES_DATA['train_acc']), STEP)]
 
     for key, data_lst in DES_DATA.items():
         if 'acc' in key:
             label = key.split('_')[0].title()
-            plt.plot(epoch_labels, data_lst, label=label)
+            plt.plot(epochs, data_lst, label=label)
 
     plt.ylim((0, 1.))
     plt.xlim(epoch_labels[0], epoch_labels[-1])
@@ -116,7 +118,7 @@ def plot_train_acc():
 
 
 if __name__ == '__main__':
-    plot_setup()
-    # plot_train_acc()
+    plot_setup(plot_type='train_acc')
+    plot_train_acc()
     # plot_train_loss()
     plot_data(version=1)

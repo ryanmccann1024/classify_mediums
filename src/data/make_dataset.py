@@ -80,7 +80,13 @@ def handle_wiki_art():
     """
     Structure the WikiArt dataset.
     """
-    # TODO: Probably will end up resizing the tensors, still need labels?
+    pass
+
+
+def handle_image_net():
+    """
+    Structure the ImageNet dataset.
+    """
     pass
 
 
@@ -200,9 +206,8 @@ def main():
     """
     Controls this script.
     """
-    # handle_modern_art()
-    # handle_national_goa()
-    make_data_split()
+    handle_wiki_art()
+    # make_data_split()
 
 
 if __name__ == '__main__':

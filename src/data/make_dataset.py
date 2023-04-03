@@ -122,8 +122,7 @@ def handle_national_goa():
     """
     Structure the National Gallery of Art's dataset.
     """
-    # TODO: Change
-    images_csv = pd.read_csv(f'{DATA_FP}/external/published_images.csv')[34200:]
+    images_csv = pd.read_csv(f'{DATA_FP}/external/published_images.csv')
     info_csv = pd.read_csv(f'{DATA_FP}/external/objects.csv')
 
     info_dict = dict()

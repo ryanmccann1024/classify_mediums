@@ -74,9 +74,7 @@ def clean_string(dirty_str: str):
     """
     Formats a string to snakecase.
     """
-    clean_str = dirty_str.lower().replace(',', '').replace(' ', '_').replace('.', '').replace('-', '_').replace("'",
-                                                                                                                '').replace(
-        '"', '')
+    clean_str = re.sub('\W+', '', dirty_str)
     return clean_str
 
 

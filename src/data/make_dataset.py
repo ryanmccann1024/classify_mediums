@@ -106,7 +106,7 @@ def handle_metropolitan_moa():
                     print(f'URL is empty for Object ID {obj_id}, continuing...')
                     continue
             except:
-                print('Error occured obtaining url for Objext ID {obj_id}, continuing...')
+                print(f'Error occured obtaining url for Objext ID {obj_id}, continuing...')
                 continue
 
             save_fp = f"{DATA_FP}/processed/metropolitan/{medium}"

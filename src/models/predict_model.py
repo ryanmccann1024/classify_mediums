@@ -2,18 +2,35 @@ from __future__ import print_function
 from __future__ import division
 import torch
 import torch.nn as nn
+import pandas as pd
 import torch.optim as optim
 import numpy as np
 from torchvision import datasets, models, transforms
 import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.metrics import confusion_matrix
 import time
 import os
 import copy
 
 
+def plot_confusion_matrix(predicted_vals, actual_vals):
+    # TODO: Check if this has to be in a certain order
+    classes = ('Ants', 'Bees')
+
+    cf_matrix = confusion_matrix(actual_vals, predicted_vals)
+    df_cm = pd.DataFrame(cf_matrix / np.sum(cf_matrix, axis=1)[:, None], index=[i for i in classes],
+                         columns=[i for i in classes])
+    plt.figure(figsize=(12, 7))
+    sns.heatmap(df_cm, annot=True)
+    plt.savefig('./confusion_matrix.png')
+
+
 # TODO: Need optimizer actually
-# TODO: We want something like a matrix to show what it classified as (like the paper)
 def test_model(model, dataloaders, criterion, device=None):
+    predicted_labels = []
+    actual_labels = []
+
     test_acc_history = []
     test_loss_history = []
     best_acc = 0.0
@@ -27,12 +44,14 @@ def test_model(model, dataloaders, criterion, device=None):
         inputs = inputs.to(device)
         labels = labels.to(device)
 
-        # TODO: Do I need to Zero the parameter gradients as in training? (See the training script)
+        actual_labels.extend(labels.data.cpu().numpy())
 
+        # TODO: Do I need to Zero the parameter gradients as in training? (See the training script)
         outputs = model(inputs)
         loss = criterion(outputs, labels)
 
         _, preds = torch.max(outputs, 1)
+        predicted_labels.extend(preds.data.cpu().numpy())
 
         running_loss += loss.item() * inputs.size(0)
         running_corrects += torch.sum(preds == labels.data)
@@ -46,6 +65,8 @@ def test_model(model, dataloaders, criterion, device=None):
 
         test_acc_history.append(curr_acc)
         test_loss_history.append(curr_loss)
+
+    plot_confusion_matrix(predicted_labels, actual_labels)
 
 
 def set_parameter_requires_grad(model, feature_extracting):

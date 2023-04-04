@@ -5,6 +5,7 @@ import random
 import shutil
 import math
 import json
+from re import sub
 
 import pandas as pd
 
@@ -73,8 +74,14 @@ def clean_string(dirty_str: str):
     """
     Formats a string to snakecase.
     """
-    clean_str = dirty_str.lower().replace(',', '').replace(' ', '_').replace('.', '').replace('-', '_').replace("'", '').replace('"', '')
+    clean_str = dirty_str.lower().replace(',', '').replace(' ', '_').replace('.', '').replace('-', '_').replace("'",
+                                                                                                                '').replace(
+        '"', '')
     return clean_str
+
+
+def clean_string_v2(dirty_str):
+    return sub('\W+', '', dirty_str)
 
 
 def handle_wiki_art():
@@ -90,6 +97,7 @@ def handle_image_net():
     """
     pass
 
+
 def handle_metropolitan_moa():
     """
     Structure the metropolitan museum of art dataset.
@@ -101,7 +109,9 @@ def handle_metropolitan_moa():
         if medium is not False and str(row['Is Public Domain']) == "True":
             obj_id = row['Object ID']
             try:
-                url = json.loads(requests.get(f'https://collectionapi.metmuseum.org/public/collection/v1/objects/{ obj_id }').text)['primaryImageSmall']
+                url = json.loads(
+                    requests.get(f'https://collectionapi.metmuseum.org/public/collection/v1/objects/{obj_id}').text)[
+                    'primaryImageSmall']
                 if url == '':
                     print(f'URL is empty for Object ID {obj_id}, continuing...')
                     continue
@@ -125,6 +135,7 @@ def handle_metropolitan_moa():
 
         if i % 100 == 0:
             print(f'{i} iterations completed out of {len(csv)}')
+
 
 def handle_modern_art():
     """
@@ -244,7 +255,8 @@ def main():
     """
     # handle_wiki_art()
     # make_data_split()
-    handle_metropolitan_moa()
+    # handle_metropolitan_moa()
+    print(sub('\W+', '', "Francis Merrone"))
 
 
 if __name__ == '__main__':

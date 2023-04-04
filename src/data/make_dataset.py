@@ -4,6 +4,7 @@ import time
 import random
 import shutil
 import math
+import json
 
 import pandas as pd
 
@@ -89,6 +90,41 @@ def handle_image_net():
     """
     pass
 
+def handle_metropolitan_moa():
+    """
+    Structure the metropolitan museum of art dataset.
+    """
+    csv = pd.read_csv(f'{DATA_FP}/external/MetObjects.csv')
+    for i, row in csv.iterrows():
+        medium = handle_medium(row['Medium'])
+
+        if medium is not False and str(row['Is Public Domain']) == "True":
+            obj_id = row['Object ID']
+            try:
+                url = json.loads(requests.get(f'https://collectionapi.metmuseum.org/public/collection/v1/objects/{ obj_id }').text)['primaryImageSmall']
+                if url == '':
+                    print(f'URL is empty for Object ID {obj_id}, continuing...')
+                    continue
+            except:
+                print('Error occured obtaining url for Objext ID {obj_id}, continuing...')
+                continue
+
+            save_fp = f"{DATA_FP}/processed/metropolitan/{medium}"
+
+            artist = str(row['Artist Display Name'])
+
+            year = row['Object End Date']
+
+            if '/' in artist:
+                artist = artist.split('/')[1]
+            if '|' in artist:
+                artist = artist.split('|')[1]
+
+            image_name = f'{artist}_{year}'
+            handle_image_data(url, save_fp, image_name)
+
+        if i % 100 == 0:
+            print(f'{i} iterations completed out of {len(csv)}')
 
 def handle_modern_art():
     """
@@ -206,8 +242,9 @@ def main():
     """
     Controls this script.
     """
-    handle_wiki_art()
+    # handle_wiki_art()
     # make_data_split()
+    handle_metropolitan_moa()
 
 
 if __name__ == '__main__':

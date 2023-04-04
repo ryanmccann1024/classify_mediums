@@ -73,7 +73,7 @@ def clean_string(dirty_str: str):
     """
     Formats a string to snakecase.
     """
-    clean_str = dirty_str.lower().replace(',', '').replace(' ', '_').replace('.', '').replace('-', '_').replace("'", '')
+    clean_str = dirty_str.lower().replace(',', '').replace(' ', '_').replace('.', '').replace('-', '_').replace("'", '').replace('"', '')
     return clean_str
 
 
@@ -111,7 +111,7 @@ def handle_metropolitan_moa():
 
             save_fp = f"{DATA_FP}/processed/metropolitan/{medium}"
 
-            artist = str(row['Artist Display Name'])
+            artist = clean_string(str(row['Artist Display Name']))
 
             year = row['Object End Date']
 

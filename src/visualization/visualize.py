@@ -12,7 +12,7 @@ with open('../../data/processed/v1/train_output_v1.json', 'r') as file_obj:
 
 LEGEND_LABELS = ['Train', 'Validation', 'Testing']
 STEP = 10
-VERSION = 1
+VERSION = 2
 
 
 def get_data():
@@ -144,4 +144,5 @@ def plot_confusion_matrix():
 
 if __name__ == '__main__':
     plot_setup()
-    plot_confusion_matrix()
+    plot_data()
+    # plot_confusion_matrix()

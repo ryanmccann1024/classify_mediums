@@ -13,15 +13,7 @@ DATA_FP = '../../data'
 MEDIUMS = ['oil', 'watercolor', 'pastel', 'pencil', 'tempera']
 HEADERS = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) '
                          'Chrome/50.0.2661.102 Safari/537.36'}
-
-
-# TODO: Save photos by something more descriptive
-
-# TODO: Things we'd like to analyze
-#   Number of mediums (If we don't have as high of an accuracy, we do have stats for other mediums?)
-#   Number of artists
-#   When the artwork was created? Newer vs. older artwork may have an effect?
-#   How many samples in your dataset that you have
+VERSION = 2
 
 
 def create_dir(des_fp: str):
@@ -54,6 +46,7 @@ def handle_image_data(url, save_fp, image_name):
             file_obj.write(image_data.content)
 
 
+# TODO: Check for multiple mediums
 def handle_medium(raw_medium: str):
     """
     Given a sentence describing the medium used, identify the medium and make it one word.
@@ -70,30 +63,8 @@ def handle_medium(raw_medium: str):
     return False
 
 
-def clean_string(dirty_str: str):
-    """
-    Formats a string to snakecase.
-    """
-    clean_str = re.sub('\W+', '', dirty_str)
-    return clean_str
-
-
 def clean_string_v2(dirty_str):
-    return sub('\W+', '', dirty_str)
-
-
-def handle_wiki_art():
-    """
-    Structure the WikiArt dataset.
-    """
-    pass
-
-
-def handle_image_net():
-    """
-    Structure the ImageNet dataset.
-    """
-    pass
+    return sub('\W+', '', dirty_str.replace(' ', '_'))
 
 
 def handle_metropolitan_moa():
@@ -119,7 +90,7 @@ def handle_metropolitan_moa():
 
             save_fp = f"{DATA_FP}/processed/metropolitan/{medium}"
 
-            artist = clean_string(str(row['Artist Display Name']))
+            artist = clean_string_v2(str(row['Artist Display Name']))
 
             year = row['Object End Date']
 
@@ -150,7 +121,7 @@ def handle_modern_art():
                 continue
 
             save_fp = f"{DATA_FP}/processed/modern_art/{medium}"
-            artist = clean_string(row['Artist'])
+            artist = clean_string_v2(row['Artist'])
 
             year = row['EndDate']
             if year == '(0)':
@@ -196,7 +167,7 @@ def handle_national_goa():
         if obj_id in info_dict.keys():
             url = row['iiifthumburl']
             save_fp = f"{DATA_FP}/processed/national_goa/{info_dict[obj_id]['medium']}"
-            artist = clean_string(info_dict[obj_id]['attribution'])
+            artist = clean_string_v2(info_dict[obj_id]['attribution'])
             year = str(info_dict[obj_id]['endyear']).split('.')[0]
 
             image_name = f'{artist}_{year}'
@@ -215,20 +186,48 @@ def copy_images(src, dest, image_list):
         shutil.copy(f'{src}/{image_name}', f'{dest}/{image_name}')
 
 
+def get_test_images():
+    """
+    Obtains all the testing images previously used, ensuring they do not make it back into our training dataset.
+    """
+    res_dict = {'oil': [], 'watercolor': [], 'tempera': [], 'pastel': [], 'pencil': []}
+    # TODO: Only checks v1 as of now
+    des_fp = '../../data/processed/v1/test'
+
+    for medium in os.listdir(des_fp):
+        for image in os.listdir(f'{des_fp}/{medium}'):
+            res_dict[medium].append(image)
+
+    return res_dict
+
+
 def make_data_split():
     """
     Creates the training, validation, and testing data sets.
     """
-    des_dirs = ['modern_art', 'national_goa']
-    check_dict = dict()
+    # Check to make sure testing images never make it in the training dataset
+    test_images = get_test_images()
+
+    des_dirs = ['modern_art', 'national_goa', 'metropolitan']
+
     for curr_dir in des_dirs:
         mediums = [medium for medium in os.listdir(f'{DATA_FP}/processed/{curr_dir}')]
-        check_dict[curr_dir] = dict()
         for curr_medium in mediums:
             medium_path = f'{DATA_FP}/processed/{curr_dir}/{curr_medium}'
-            images = [image for image in os.listdir(medium_path)]
-            random.shuffle(images)
+            images = [image for image in os.listdir(medium_path) if image not in test_images[curr_medium]]
+            # Testing images from v1
+            last_test = [image for image in os.listdir(medium_path) if image in test_images[curr_medium]]
 
+            # Shrink our dataset to attempt to make each medium close to equal
+            if curr_medium == 'oil':
+                last_test = last_test[0:150]
+                images = images[0:200]
+            elif curr_medium == 'watercolor':
+                last_test = last_test[0:180]
+                images = images[0:200]
+            elif curr_medium == 'pencil':
+                last_test = last_test[0:140]
+                images = images[0:270]
             # (About) eighty percent of the images shall go to training
             curr_len = len(images)
 
@@ -241,10 +240,14 @@ def make_data_split():
 
             # The rest of the images will go to testing (should be around ten percent)
             test_lst = images[second_slice:]
+            # Append the remaining images used in the last training dataset (Will make our dataset slightly larger than
+            # 10 percent which we're okay with)
+            for image in last_test:
+                test_lst.append(image)
 
-            copy_images(medium_path, f'{DATA_FP}/processed/v1/train/{curr_medium}', train_lst)
-            copy_images(medium_path, f'{DATA_FP}/processed/v1/val/{curr_medium}', val_lst)
-            copy_images(medium_path, f'{DATA_FP}/processed/v1/test/{curr_medium}', test_lst)
+            copy_images(medium_path, f'{DATA_FP}/processed/v{VERSION}/train/{curr_medium}', train_lst)
+            copy_images(medium_path, f'{DATA_FP}/processed/v{VERSION}/val/{curr_medium}', val_lst)
+            copy_images(medium_path, f'{DATA_FP}/processed/v{VERSION}/test/{curr_medium}', test_lst)
 
 
 def main():
@@ -252,9 +255,8 @@ def main():
     Controls this script.
     """
     # handle_wiki_art()
-    # make_data_split()
+    make_data_split()
     # handle_metropolitan_moa()
-    print(sub('\W+', '', "Francis Merrone"))
 
 
 if __name__ == '__main__':

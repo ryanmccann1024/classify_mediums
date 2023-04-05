@@ -1,5 +1,9 @@
 import json
 import os
+import pandas as pd
+import seaborn as sns
+import numpy as np
+from sklearn.metrics import confusion_matrix
 
 import matplotlib.pyplot as plt
 
@@ -40,7 +44,7 @@ def get_data():
     return resp_dict
 
 
-def plot_data(version=None):
+def plot_data():
     plot_dict = get_data()
 
     # Plot mediums bar graph
@@ -49,14 +53,14 @@ def plot_data(version=None):
     plt.title('Medium Distribution')
     plt.xlabel('Mediums')
     plt.ylabel('Number of Images')
-    plt.savefig(f'mediums_v{VERSION}.png')
+    plt.savefig(f'./v{VERSION}/mediums_v{VERSION}.png')
 
     plt.figure(2)
     plt.hist(plot_dict['years'], color='#6666ff', edgecolor='black')
     plt.title('Year Created Distribution')
     plt.xlabel('Years')
     plt.ylabel('Number of Images')
-    plt.savefig(f'years_v{VERSION}.png')
+    plt.savefig(f'./v{VERSION}/years_v{VERSION}.png')
 
 
 def plot_setup(plot_type=None):
@@ -94,7 +98,7 @@ def plot_train_loss():
     plt.xlim(epoch_labels[0], epoch_labels[-1])
     plt.xticks(epoch_labels)
     plt.legend()
-    plt.savefig(f'./train_loss_v{VERSION}.png')
+    plt.savefig(f'./v{VERSION}/train_loss_v{VERSION}.png')
 
 
 def plot_train_acc():
@@ -113,12 +117,26 @@ def plot_train_acc():
     plt.xlim(epoch_labels[0], epoch_labels[-1])
     plt.xticks(epoch_labels)
     plt.legend()
-    plt.savefig(f'./train_acc_v{VERSION}.png')
+    plt.savefig(f'./v{VERSION}/train_acc_v{VERSION}.png')
     # plt.show()
 
 
+def plot_confusion_matrix():
+    with open(f'../../data/processed/v1/test_output_v{VERSION}.json', 'r') as file_obj:
+        test_data = json.load(file_obj)
+
+    # TODO: Check if this has to be in a certain order
+    classes = ('Ants', 'Bees')
+
+    cf_matrix = confusion_matrix(test_data['actual'], test_data['predicted'])
+    df_cm = pd.DataFrame(cf_matrix / np.sum(cf_matrix, axis=1)[:, None], index=[i for i in classes],
+                         columns=[i for i in classes])
+
+    cmap_color = sns.color_palette("ch:start=.2,rot=-.3", as_cmap=True)
+    sns.heatmap(df_cm, annot=True, cmap=cmap_color).set(title='Feature Heat Map')
+    plt.savefig(f'./v{VERSION}/confusion_matrix.png')
+
+
 if __name__ == '__main__':
-    plot_setup(plot_type='train_acc')
-    plot_train_acc()
-    # plot_train_loss()
-    plot_data(version=1)
+    plot_setup()
+    plot_confusion_matrix()

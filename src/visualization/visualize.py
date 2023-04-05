@@ -44,6 +44,8 @@ def get_data():
     return resp_dict
 
 
+# TODO: Remove unknown years
+# TODO: Custom bins to be more descriptive
 def plot_data():
     plot_dict = get_data()
 
@@ -134,7 +136,10 @@ def plot_confusion_matrix():
 
     cmap_color = sns.color_palette("ch:start=.2,rot=-.3", as_cmap=True)
     sns.heatmap(df_cm, annot=True, cmap=cmap_color).set(title='Feature Heat Map')
-    plt.savefig(f'./v{VERSION}/confusion_matrix.png')
+    plt.xlabel('Actual', fontweight='semibold')
+    plt.ylabel('Predicted', fontweight='semibold')
+
+    plt.savefig(f'./v{VERSION}/confusion_matrix_v{VERSION}.png')
 
 
 if __name__ == '__main__':

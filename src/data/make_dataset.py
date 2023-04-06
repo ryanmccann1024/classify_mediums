@@ -5,6 +5,7 @@ import random
 import shutil
 import math
 import json
+import jsonlines
 from re import sub
 
 import pandas as pd
@@ -37,7 +38,7 @@ def handle_image_data(url, save_fp, image_name):
     Retrieves an image from the World Wide Web given a URL.
     """
     image_data = requests.get(url, headers=HEADERS)
-    time.sleep(0.1)
+    time.sleep(1)
 
     if image_data.status_code == 200:
         create_dir(save_fp)
@@ -64,7 +65,7 @@ def handle_medium(raw_medium: str):
 
 
 def clean_string_v2(dirty_str):
-    return sub('\W+', '', dirty_str.replace(' ', '_'))
+    return sub('\W+', '', dirty_str.replace(' ', '_').lower())
 
 
 def handle_metropolitan_moa():
@@ -177,6 +178,50 @@ def handle_national_goa():
             print(f'{i} iterations completed out of {len(info_csv)}')
 
 
+def handle_chicago():
+    """
+    Structure the Art Institute of Chicago dataset.
+    """
+    i = 0
+
+    with jsonlines.open('../../data/external/allArtworks.jsonl') as file_obj:
+        num_lines = [line for line in file_obj.iter()]
+
+    with jsonlines.open('../../data/external/allArtworks.jsonl') as file_obj:
+        for line in file_obj.iter():
+            # Link used to get necessary info to the image
+            info_url = f"https://api.artic.edu/api/v1/artworks/{line['id']}?fields=id,title,image_id,term_titles,fiscal_year"
+            info_resp = requests.get(info_url, headers=HEADERS).content.decode()
+
+            info_resp = json.loads(info_resp)
+
+            # Medium descriptions lie in here
+            terms = info_resp['data']['term_titles']
+            for term in terms:
+                medium = handle_medium(term)
+                if medium is not False:
+                    break
+
+            if medium is False:
+                continue
+
+            artist = clean_string_v2(line['artist_title'])
+            year = info_resp['data']['fiscal_year']
+            image_name = f'{artist}_{year}'
+
+            image_id = info_resp['data']['image_id']
+            config_url = info_resp['config']['iiif_url']
+
+            save_fp = f"{DATA_FP}/processed/chicago/{medium}"
+            image_url = f'{config_url}/{image_id}/full/843,/0/default.jpg'
+            handle_image_data(image_url, save_fp, image_name)
+
+            if i % 100 == 0:
+                print(f'{i} iterations completed out of {len(num_lines)}')
+
+            i += 1
+
+
 def copy_images(src, dest, image_list):
     """
     Copies an image from source directory to a destination directory.
@@ -254,9 +299,8 @@ def main():
     """
     Controls this script.
     """
-    # handle_wiki_art()
-    make_data_split()
-    # handle_metropolitan_moa()
+    # make_data_split()
+    handle_chicago()
 
 
 if __name__ == '__main__':

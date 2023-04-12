@@ -166,13 +166,13 @@ def handle_national_goa():
     for i, row in images_csv.iterrows():
         obj_id = row['depictstmsobjectid']
         if obj_id in info_dict.keys():
-            url = row['iiifthumburl']
+            url = row['iiifurl']
             save_fp = f"{DATA_FP}/processed/national_goa/{info_dict[obj_id]['medium']}"
             artist = clean_string_v2(info_dict[obj_id]['attribution'])
             year = str(info_dict[obj_id]['endyear']).split('.')[0]
 
             image_name = f'{artist}_{year}'
-            handle_image_data(url, save_fp, image_name)
+            handle_image_data(url + '/full/!20000,20000/0/default.jpg', save_fp, image_name)
 
         if i % 100 == 0:
             print(f'{i} iterations completed out of {len(info_csv)}')
@@ -300,7 +300,7 @@ def main():
     Controls this script.
     """
     # make_data_split()
-    handle_chicago()
+    handle_national_goa()
 
 
 if __name__ == '__main__':

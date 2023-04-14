@@ -222,13 +222,14 @@ def handle_chicago():
             i += 1
 
 
-def copy_images(src, dest, image_list):
+def copy_images(image_list, dest):
     """
     Copies an image from source directory to a destination directory.
     """
     create_dir(dest)
-    for image_name in image_list:
-        shutil.copy(f'{src}/{image_name}', f'{dest}/{image_name}')
+    for image_path in image_list:
+        image_name = image_path.split('/')[-1]
+        shutil.copy(image_path, f'{dest}/{image_name}')
 
 
 def get_test_images():
@@ -246,61 +247,60 @@ def get_test_images():
     return res_dict
 
 
+def patch_image():
+    pass
+
+
 def make_data_split():
     """
     Creates the training, validation, and testing data sets.
     """
-    # Check to make sure testing images never make it in the training dataset
+    # Contains images used in all prior testing datasets
     test_images = get_test_images()
+    image_dict = {'oil': [], 'watercolor': [], 'pencil': [], 'tempera': [], 'pastel': []}
+    data_dirs = ['modern_art', 'national_goa', 'metropolitan']
 
-    des_dirs = ['modern_art', 'national_goa', 'metropolitan']
+    for directory in data_dirs:
+        mediums_lst = [medium for medium in os.listdir(f'{DATA_FP}/processed/{directory}')]
+        for medium in mediums_lst:
+            medium_path = f'{DATA_FP}/processed/{directory}/{medium}'
+            images = [f'{medium_path}/{image}' for image in os.listdir(medium_path) if image not in test_images[medium]]
+            prior_test_images = [f'{medium_path}/{image}' for image in os.listdir(medium_path) if
+                                 image in test_images[medium]]
 
-    for curr_dir in des_dirs:
-        mediums = [medium for medium in os.listdir(f'{DATA_FP}/processed/{curr_dir}')]
-        for curr_medium in mediums:
-            medium_path = f'{DATA_FP}/processed/{curr_dir}/{curr_medium}'
-            images = [image for image in os.listdir(medium_path) if image not in test_images[curr_medium]]
-            # Testing images from v1
-            last_test = [image for image in os.listdir(medium_path) if image in test_images[curr_medium]]
+            random.shuffle(images)
+            test_images[medium].extend(prior_test_images)
+            image_dict[medium].extend(images)
 
-            # Shrink our dataset to attempt to make each medium close to equal
-            if curr_medium == 'oil':
-                last_test = last_test[0:150]
-                images = images[0:200]
-            elif curr_medium == 'watercolor':
-                last_test = last_test[0:180]
-                images = images[0:200]
-            elif curr_medium == 'pencil':
-                last_test = last_test[0:140]
-                images = images[0:270]
-            # (About) eighty percent of the images shall go to training
-            curr_len = len(images)
+    least_images = math.inf
+    for medium, image_lst in image_dict.items():
+        if len(image_lst) < least_images:
+            least_images = len(image_lst)
 
-            first_slice = int(math.floor(curr_len * 0.8))
-            train_lst = images[0:first_slice]
+    for medium, image_lst in image_dict.items():
+        # Even distribution, give 10 percent to validation and testing datasets
+        image_lst = image_lst[0:least_images]
 
-            # (About) ten percent of the images shall go to validation
-            second_slice = int(first_slice + (math.floor(curr_len * 0.1)))
-            val_lst = images[first_slice:second_slice]
+        num_images = len(image_lst)
+        train_slice = int(math.floor(num_images * 0.8))
+        train_lst = image_lst[0:train_slice]
 
-            # The rest of the images will go to testing (should be around ten percent)
-            test_lst = images[second_slice:]
-            # Append the remaining images used in the last training dataset (Will make our dataset slightly larger than
-            # 10 percent which we're okay with)
-            for image in last_test:
-                test_lst.append(image)
+        val_slice = int(train_slice + (math.floor(num_images * 0.1)))
+        val_lst = image_lst[train_slice:val_slice]
 
-            copy_images(medium_path, f'{DATA_FP}/processed/v{VERSION}/train/{curr_medium}', train_lst)
-            copy_images(medium_path, f'{DATA_FP}/processed/v{VERSION}/val/{curr_medium}', val_lst)
-            copy_images(medium_path, f'{DATA_FP}/processed/v{VERSION}/test/{curr_medium}', test_lst)
+        test_lst = image_lst[val_slice:]
+
+        copy_images(train_lst, f'{DATA_FP}/processed/v{VERSION}/train/{medium}')
+        copy_images(test_lst, f'{DATA_FP}/processed/v{VERSION}/val/{medium}')
+        copy_images(val_lst, f'{DATA_FP}/processed/v{VERSION}/test/{medium}')
 
 
 def main():
     """
     Controls this script.
     """
-    # make_data_split()
-    handle_national_goa()
+    make_data_split()
+    # handle_national_goa()
 
 
 if __name__ == '__main__':

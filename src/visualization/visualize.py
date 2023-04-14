@@ -30,7 +30,10 @@ def get_data():
                 else:
                     resp_dict['mediums'][medium] += 1
 
-                year = int(file.split('_')[-1].strip('.jpg'))
+                try:
+                    year = int(file.split('_')[-1].strip('.jpg'))
+                except ValueError:
+                    year = 0
                 resp_dict['years'].append(year)
 
                 artist = ''

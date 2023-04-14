@@ -119,7 +119,7 @@ def main():
 
     num_classes = 2
     batch_size = 8
-    num_epochs = 5
+    num_epochs = 90
     learn_rate = 0.001
     momentum = 0.9
     version = 1

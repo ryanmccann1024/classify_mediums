@@ -6,6 +6,7 @@ import shutil
 import math
 import json
 import jsonlines
+from PIL import Image
 from re import sub
 
 import pandas as pd
@@ -247,8 +248,37 @@ def get_test_images():
     return res_dict
 
 
-def patch_image():
-    pass
+def patch_images():
+    """
+    Will split original images into four sub-images (non-overlapping). It will do this with the version provided, and
+    create a new version with the patching implemented.
+    """
+    root_dir = f'../../data/processed/v{VERSION}/'
+    for data_dir in os.listdir(root_dir):
+        data_fp = os.path.join(root_dir, data_dir)
+        for medium_dir in os.listdir(data_fp):
+            medium_fp = os.path.join(data_fp, medium_dir)
+
+            new_version_fp = f'../../data/processed/v{VERSION + 1}/{data_dir}/{medium_dir}'
+            if not os.path.exists(f'{new_version_fp}'):
+                create_dir(f'{new_version_fp}')
+
+            for image_name in os.listdir(medium_fp):
+                image = Image.open(os.path.join(medium_fp, image_name))
+
+                width, height = image.size
+                crop_size = (width // 2, height // 2)
+
+                for i in range(2):
+                    for j in range(2):
+                        left = j * crop_size[0]
+                        top = i * crop_size[1]
+                        right = (j + 1) * crop_size[0]
+                        bottom = (i + 1) * crop_size[1]
+
+                        cropped_image = image.crop((left, top, right, bottom))
+
+                        cropped_image.save(f"{new_version_fp}/{image_name.split('.jpg')[0]}_{i}_{j}.jpg")
 
 
 def make_data_split():
@@ -299,7 +329,8 @@ def main():
     """
     Controls this script.
     """
-    make_data_split()
+    # make_data_split()
+    patch_images()
     # handle_national_goa()
 
 

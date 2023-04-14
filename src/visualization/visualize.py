@@ -12,7 +12,7 @@ with open('../../data/processed/v1/train_output_v1.json', 'r') as file_obj:
 
 LEGEND_LABELS = ['Train', 'Validation', 'Testing']
 STEP = 10
-VERSION = 2
+VERSION = 3
 
 
 def get_data():

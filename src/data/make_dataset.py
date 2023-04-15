@@ -248,7 +248,7 @@ def get_test_images():
     return res_dict
 
 
-def patch_images():
+def patch_images(rotate=False):
     """
     Will split original images into four sub-images (non-overlapping). It will do this with the version provided, and
     create a new version with the patching implemented.
@@ -278,7 +278,14 @@ def patch_images():
 
                         cropped_image = image.crop((left, top, right, bottom))
 
-                        cropped_image.save(f"{new_version_fp}/{image_name.split('.jpg')[0]}_{i}_{j}.jpg")
+                        # Do not rotate testing images (no need)
+                        if rotate and data_dir != 'test':
+                            for angle in range(0, 360, 90):
+                                rotated = cropped_image.rotate(angle, expand=True)
+                                filename = f"{new_version_fp}/{image_name.split('.jpg')[0]}_{i}_{j}_{angle}.jpg"
+                                rotated.save(filename)
+                        else:
+                            cropped_image.save(f"{new_version_fp}/{image_name.split('.jpg')[0]}_{i}_{j}.jpg")
 
 
 def make_data_split():
@@ -330,7 +337,7 @@ def main():
     Controls this script.
     """
     # make_data_split()
-    patch_images()
+    patch_images(rotate=True)
     # handle_national_goa()
 
 

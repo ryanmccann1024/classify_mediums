@@ -17,15 +17,21 @@ import json
 def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_inception=False, device=None):
     since = time.time()
 
-    train_acc = list()
-    val_acc = list()
-    # Best validation accuracy
-    best_acc = 0.0
-
     train_loss = list()
+    train_acc = list()
+    train_precision = list()
+    train_recall = list()
+    train_f1_score = list()
+
     val_loss = list()
+    val_acc = list()
+    val_precision = list()
+    val_recall = list()
+    val_f1_score = list()
 
     best_model_wts = copy.deepcopy(model.state_dict())
+
+    best_f1_score = 0.0
 
     for epoch in range(num_epochs):
         print('Epoch {}/{}'.format(epoch, num_epochs - 1))
@@ -40,6 +46,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
 
             running_loss = 0.0
             running_corrects = 0
+            tp = fp = tn = fn = 0
 
             # Iterate over data.
             for inputs, labels in dataloaders[phase]:
@@ -70,31 +77,48 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
                 running_loss += loss.item() * inputs.size(0)
                 running_corrects += torch.sum(preds == labels.data)
 
+                tp += ((preds == 1) & (labels.data == 1)).sum().item()
+                fp += ((preds == 1) & (labels.data == 0)).sum().item()
+                tn += ((preds == 0) & (labels.data == 0)).sum().item()
+                fn += ((preds == 0) & (labels.data == 1)).sum().item()
+
+
             epoch_loss = running_loss / len(dataloaders[phase].dataset)
             epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
 
-            print('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss, epoch_acc))
+            precision = tp / (tp + fp + 1e-8)
+            recall = tp / (tp + fn + 1e-8)
+            f1_score = 2 * precision * recall / (precision + recall + 1e-8)
+
+            if phase == 'train':
+                train_loss.append(epoch_loss)
+                train_acc.append(epoch_acc)
+                train_precision.append(precision)
+                train_recall.append(recall)
+                train_f1_score.append(f1_score)
+            else:
+                val_loss.append(epoch_loss)
+                val_acc.append(epoch_acc)
+                val_precision.append(precision)
+                val_recall.append(recall)
+                val_f1_score.append(f1_score)
+
+            print('[{}]\tLoss: {:.4f}, Acc: {:.4f}, Precision: {:.4f}, Recall: {:.4f}, F1 Score: {:.4f}'.format(phase, epoch_loss, epoch_acc, precision, recall, f1_score))
 
             # deep copy the model
-            if phase == 'val' and epoch_acc > best_acc:
-                best_acc = epoch_acc
+            if phase == 'val' and f1_score > best_f1_score:
+                best_f1_score = f1_score
                 best_model_wts = copy.deepcopy(model.state_dict())
-            if phase == 'val':
-                val_acc.append(epoch_acc)
-                val_loss.append(epoch_loss)
-            else:
-                train_acc.append(epoch_acc)
-                train_loss.append(epoch_loss)
 
         print()
 
     time_elapsed = time.time() - since
     print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
-    print('Best val Acc: {:4f}'.format(best_acc))
+    print('Best val F1 Score: {:4f}'.format(best_f1_score))
 
     # load best model weights
     model.load_state_dict(best_model_wts)
-    return model, [train_acc, train_loss, val_acc, val_loss]
+    return model, [train_acc, train_loss, train_precision, train_recall, train_f1_score, val_acc, val_loss, val_precision, val_recall, val_f1_score]
 
 
 def set_parameter_requires_grad(model, feature_extracting):
@@ -118,8 +142,8 @@ def main():
     base_fp = "../../data/external/hymenoptera_data"
 
     num_classes = 2
-    batch_size = 8
-    num_epochs = 90
+    batch_size = 32
+    num_epochs = 50
     learn_rate = 0.001
     momentum = 0.9
     version = 1
@@ -175,21 +199,34 @@ def main():
     criterion = nn.CrossEntropyLoss()
 
     # Train and evaluate
-    model_ft, resp_lst = train_model(model_ft, dataloaders_dict, criterion, optimizer_ft, num_epochs=num_epochs,
-                                     is_inception=False, device=device)
+    model_ft, resp_lst = train_model(model_ft, dataloaders_dict, criterion, optimizer_ft,
+                                     num_epochs=num_epochs, is_inception=False, device=device)
 
     train_acc = [num.cpu().tolist() for num in resp_lst[0]]
     train_loss = resp_lst[1]
-    val_acc = [num.cpu().tolist() for num in resp_lst[2]]
-    val_loss = resp_lst[3]
+    train_precision = resp_lst[2]
+    train_recall = resp_lst[3]
+    train_f1_score = resp_lst[4]
+    val_acc = [num.cpu().tolist() for num in resp_lst[5]]
+    val_loss = resp_lst[6]
+    val_precision = resp_lst[7]
+    val_recall = resp_lst[8]
+    val_f1_score = resp_lst[9]
+
     # torch.save(model_ft.state_dict(), f'../../models/densenet-121_v{version}')
     torch.save(model_ft.state_dict(), f'../../models/check')
 
     res_dict = {
         'train_acc': train_acc,
         'train_loss': train_loss,
+        'train_precision': train_precision,
+        'train_recall': train_recall,
+        'train_f1_score': train_f1_score,
         'val_acc': val_acc,
         'val_loss': val_loss,
+        'val_precision': val_precision,
+        'val_recall': val_recall,
+        'val_f1_score': val_f1_score,
         'hyperparams': {
             'epochs': num_epochs,
             'batch_size': batch_size,

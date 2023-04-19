@@ -109,6 +109,12 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
             if phase == 'val' and f1_score > best_f1_score:
                 best_f1_score = f1_score
                 best_model_wts = copy.deepcopy(model.state_dict())
+            if phase == 'val':
+                val_acc.append(epoch_acc)
+                val_loss.append(epoch_loss)
+            else:
+                train_acc.append(epoch_acc)
+                train_loss.append(epoch_loss)
 
         print()
 
@@ -127,13 +133,37 @@ def set_parameter_requires_grad(model, feature_extracting):
             param.requires_grad = False
 
 
-def initialize_model(num_classes, feature_extract, use_pretrained=True):
-    # Specific to Densenet-121 (Not actually sure if it's only for 121 in this block of code)
-    model_ft = models.densenet121(pretrained=use_pretrained)
-    set_parameter_requires_grad(model_ft, feature_extract)
-    num_ftrs = model_ft.classifier.in_features
-    model_ft.classifier = nn.Linear(num_ftrs, num_classes)
-    input_size = 224
+def initialize_model(num_classes, feature_extract, use_pretrained=True, model='densenet-121'):
+    if model == 'densenet-121':
+        model_ft = models.densenet121(pretrained=use_pretrained)
+        set_parameter_requires_grad(model_ft, feature_extract)
+        num_ftrs = model_ft.classifier.in_features
+        model_ft.classifier = nn.Linear(num_ftrs, num_classes)
+        input_size = 224
+    elif model == 'densenet-161':
+        model_ft = models.densenet161(pretrained=use_pretrained)
+        set_parameter_requires_grad(model_ft, feature_extract)
+        num_ftrs = model_ft.classifier.in_features
+        model_ft.classifier = nn.Linear(num_ftrs, num_classes)
+        input_size = 224
+    elif model == 'efficient':
+        # TODO: There are variations of this!
+        model_ft = models.efficientnet_v2_m(pretrained=use_pretrained)
+        set_parameter_requires_grad(model_ft, feature_extract)
+        # Manually printed the model to find this! (Check it)
+        num_ftrs = 1280
+        model_ft.classifier = nn.Linear(num_ftrs, num_classes)
+        input_size = 224
+    elif model == 'vision':
+        # TODO: There are variations of this AS WELL!
+        model_ft = models.vit_b_16(pretrained=use_pretrained)
+        set_parameter_requires_grad(model_ft, feature_extract)
+        # Manually printed the model to find this! (Check it)
+        num_ftrs = 768
+        model_ft.classifier = nn.Linear(num_ftrs, num_classes)
+        input_size = 224
+    else:
+        raise NotImplementedError(f'Model {model} not found')
 
     return model_ft, input_size
 
@@ -144,12 +174,13 @@ def main():
     num_classes = 2
     batch_size = 32
     num_epochs = 50
+    batch_size = 8
+    num_epochs = 5
     learn_rate = 0.001
     momentum = 0.9
-    version = 1
     feature_extract = True
 
-    model_ft, input_size = initialize_model(num_classes, feature_extract, use_pretrained=False)
+    model_ft, input_size = initialize_model(num_classes, feature_extract, use_pretrained=False, model='vision')
 
     data_transforms = {
         'train': transforms.Compose([

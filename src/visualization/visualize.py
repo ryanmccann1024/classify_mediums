@@ -12,7 +12,10 @@ with open('../../data/processed/v1/train_output_v1.json', 'r') as file_obj:
 
 LEGEND_LABELS = ['Train', 'Validation', 'Testing']
 STEP = 10
-VERSION = 3
+VERSION = 2
+
+with open(f'../../data/processed/v{VERSION}/train_output_v{VERSION}.json', 'r') as file_obj:
+    DES_DATA = json.load(file_obj)
 
 
 def get_data():
@@ -30,11 +33,9 @@ def get_data():
                 else:
                     resp_dict['mediums'][medium] += 1
 
-                try:
+                if file.split('_')[-1].strip('.jpg') != 'None' and file.split('_')[-1].strip('.jpg') != '0':
                     year = int(file.split('_')[-1].strip('.jpg'))
-                except ValueError:
-                    year = 0
-                resp_dict['years'].append(year)
+                    resp_dict['years'].append(year)
 
                 artist = ''
                 for word in file.split('_')[:-1]:
@@ -56,15 +57,15 @@ def plot_data():
     plt.figure(1)
     plt.bar(plot_dict['mediums'].keys(), plot_dict['mediums'].values(), color='#6666ff')
     plt.title('Medium Distribution')
-    plt.xlabel('Mediums')
-    plt.ylabel('Number of Images')
+    plt.xlabel('Mediums', fontweight='semibold')
+    plt.ylabel('Number of Images', fontweight='semibold')
     plt.savefig(f'./v{VERSION}/mediums_v{VERSION}.png')
 
     plt.figure(2)
     plt.hist(plot_dict['years'], color='#6666ff', edgecolor='black')
     plt.title('Year Created Distribution')
-    plt.xlabel('Years')
-    plt.ylabel('Number of Images')
+    plt.xlabel('Years', fontweight='semibold')
+    plt.ylabel('Number of Images', fontweight='semibold')
     plt.savefig(f'./v{VERSION}/years_v{VERSION}.png')
 
 
@@ -73,17 +74,33 @@ def plot_setup(plot_type=None):
     Sets up the plots depending on what is to be plotted, or not to be plotted. - AI William Shakespeare.
     """
     # plt.figure(figsize=(7, 5), dpi=300)
+    plt.clf()
     plt.figure(dpi=300)
 
     if plot_type == 'train_acc':
         plt.title("Training & Validation Accuracy vs. Number of Epochs")
-        plt.xlabel("Epochs")
-        plt.ylabel("Accuracy")
+        plt.xlabel("Epochs", fontweight='semibold')
+        plt.ylabel("Accuracy", fontweight='semibold')
         plt.grid()
     elif plot_type == 'train_loss':
         plt.title("Training & Validation Loss vs. Number of Epochs")
-        plt.xlabel("Epochs")
-        plt.ylabel("Loss")
+        plt.xlabel("Epochs", fontweight='semibold')
+        plt.ylabel("Loss", fontweight='semibold')
+        plt.grid()
+    elif plot_type == 'train_prec':
+        plt.title("Training & Validation Mean Precision vs. Number of Epochs")
+        plt.xlabel("Epochs", fontweight='semibold')
+        plt.ylabel("Mean Precision", fontweight='semibold')
+        plt.grid()
+    elif plot_type == 'train_recall':
+        plt.title("Training & Validation Mean Recall vs. Number of Epochs")
+        plt.xlabel("Epochs", fontweight='semibold')
+        plt.ylabel("Mean Recall", fontweight='semibold')
+        plt.grid()
+    elif plot_type == 'train_f1_score':
+        plt.title("Training & Validation Mean F1 Score vs. Number of Epochs")
+        plt.xlabel("Epochs", fontweight='semibold')
+        plt.ylabel("Mean F1 Score", fontweight='semibold')
         plt.grid()
 
 
@@ -96,6 +113,27 @@ def plot_train_loss():
 
     for key, data_lst in DES_DATA.items():
         if 'loss' in key:
+            print(data_lst)
+            label = key.split('_')[0].title()
+            plt.plot(epochs, data_lst, label=label)
+
+    plt.ylim((0, 2.0))
+    plt.xlim(epoch_labels[0], epoch_labels[-1])
+    plt.xticks(epoch_labels)
+    plt.legend()
+    plt.savefig(f'./v{VERSION}/train_loss_v{VERSION}.png')
+
+
+def plot_train_prec():
+    """
+    Plot precision related to training, this includes the validation loss.
+    """
+    epochs = [epoch for epoch in range(0, len(DES_DATA['train_precision']))]
+    epoch_labels = [epoch for epoch in range(0, len(DES_DATA['train_precision']), STEP)]
+
+    for key, data_lst in DES_DATA.items():
+        if 'precision' in key:
+            print(data_lst)
             label = key.split('_')[0].title()
             plt.plot(epochs, data_lst, label=label)
 
@@ -103,8 +141,45 @@ def plot_train_loss():
     plt.xlim(epoch_labels[0], epoch_labels[-1])
     plt.xticks(epoch_labels)
     plt.legend()
-    plt.savefig(f'./v{VERSION}/train_loss_v{VERSION}.png')
+    plt.savefig(f'./v{VERSION}/train_precision_v{VERSION}.png')
 
+def plot_train_recall():
+    """
+    Plot recall related to training, this includes the validation loss.
+    """
+    epochs = [epoch for epoch in range(0, len(DES_DATA['train_recall']))]
+    epoch_labels = [epoch for epoch in range(0, len(DES_DATA['train_recall']), STEP)]
+
+    for key, data_lst in DES_DATA.items():
+        if 'recall' in key:
+            print(data_lst)
+            label = key.split('_')[0].title()
+            plt.plot(epochs, data_lst, label=label)
+
+    plt.ylim((0, 1.))
+    plt.xlim(epoch_labels[0], epoch_labels[-1])
+    plt.xticks(epoch_labels)
+    plt.legend()
+    plt.savefig(f'./v{VERSION}/train_recall_v{VERSION}.png')
+
+def plot_train_f1_score():
+    """
+    Plot F1 score related to training, this includes the validation loss.
+    """
+    epochs = [epoch for epoch in range(0, len(DES_DATA['train_f1_score']))]
+    epoch_labels = [epoch for epoch in range(0, len(DES_DATA['train_f1_score']), STEP)]
+
+    for key, data_lst in DES_DATA.items():
+        if 'f1_score' in key:
+            print(data_lst)
+            label = key.split('_')[0].title()
+            plt.plot(epochs, data_lst, label=label)
+
+    plt.ylim((0, 1.))
+    plt.xlim(epoch_labels[0], epoch_labels[-1])
+    plt.xticks(epoch_labels)
+    plt.legend()
+    plt.savefig(f'./v{VERSION}/train_f1_score_v{VERSION}.png')
 
 def plot_train_acc():
     """
@@ -131,7 +206,7 @@ def plot_confusion_matrix():
         test_data = json.load(file_obj)
 
     # TODO: Check if this has to be in a certain order
-    classes = ('Ants', 'Bees')
+    classes = ('oil', 'pastel', 'pencil', 'tempera', 'watercolor')
 
     cf_matrix = confusion_matrix(test_data['actual'], test_data['predicted'])
     df_cm = pd.DataFrame(cf_matrix / np.sum(cf_matrix, axis=1)[:, None], index=[i for i in classes],
@@ -148,4 +223,15 @@ def plot_confusion_matrix():
 if __name__ == '__main__':
     plot_setup()
     plot_data()
-    # plot_confusion_matrix()
+    plot_setup('train_acc')
+    plot_train_acc()
+    plot_setup('train_loss')
+    plot_train_loss()
+    plot_setup('train_prec')
+    plot_train_prec()
+    plot_setup('train_recall')
+    plot_train_recall()
+    plot_setup('train_f1_score')
+    plot_train_f1_score()
+    plot_setup()
+    plot_confusion_matrix()

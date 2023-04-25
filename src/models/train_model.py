@@ -14,7 +14,7 @@ import json
 # TODO: Reference this code from the docs
 
 
-def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_inception=False, device=None):
+def train_model(model, dataloaders, criterion, optimizer, num_classes, num_epochs=25, is_inception=False, device=None):
     since = time.time()
 
     train_loss = list()
@@ -46,7 +46,11 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
 
             running_loss = 0.0
             running_corrects = 0
-            tp = fp = tn = fn = 0
+            tp = [0] * num_classes
+            fp = [0] * num_classes
+            tn = [0] * num_classes
+            fn = [0] * num_classes
+            test = 0
 
             # Iterate over data.
             for inputs, labels in dataloaders[phase]:
@@ -77,44 +81,50 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
                 running_loss += loss.item() * inputs.size(0)
                 running_corrects += torch.sum(preds == labels.data)
 
-                tp += ((preds == 1) & (labels.data == 1)).sum().item()
-                fp += ((preds == 1) & (labels.data == 0)).sum().item()
-                tn += ((preds == 0) & (labels.data == 0)).sum().item()
-                fn += ((preds == 0) & (labels.data == 1)).sum().item()
-
+                for i in range(num_classes):
+                    tp[i] += ((preds == i) & (labels.data == i)).sum().item()
+                    fp[i] += ((preds == i) & (labels.data != i)).sum().item()
+                    tn[i] += ((preds != i) & (labels.data != i)).sum().item()
+                    fn[i] += ((preds != i) & (labels.data == i)).sum().item()
 
             epoch_loss = running_loss / len(dataloaders[phase].dataset)
             epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
+            
+            precision = []
+            recall = []
+            f1_score = []
 
-            precision = tp / (tp + fp + 1e-8)
-            recall = tp / (tp + fn + 1e-8)
-            f1_score = 2 * precision * recall / (precision + recall + 1e-8)
+            for i in range(num_classes):
+                p = tp[i] / (tp[i] + fp[i] + 1e-8)
+                r = tp[i] / (tp[i] + fn[i] + 1e-8)
+                f1 = 2 * p * r / (p + r + 1e-8)
+                precision.append(p)
+                recall.append(r)
+                f1_score.append(f1)
+
+            mean_precision = sum(precision) / len(precision)
+            mean_recall = sum(recall) / len(recall)
+            mean_f1_score = sum(f1_score) / len(f1_score)
 
             if phase == 'train':
                 train_loss.append(epoch_loss)
                 train_acc.append(epoch_acc)
-                train_precision.append(precision)
-                train_recall.append(recall)
-                train_f1_score.append(f1_score)
+                train_precision.append(mean_precision)
+                train_recall.append(mean_recall)
+                train_f1_score.append(mean_f1_score)
             else:
                 val_loss.append(epoch_loss)
                 val_acc.append(epoch_acc)
-                val_precision.append(precision)
-                val_recall.append(recall)
-                val_f1_score.append(f1_score)
+                val_precision.append(mean_precision)
+                val_recall.append(mean_recall)
+                val_f1_score.append(mean_f1_score)
 
-            print('[{}]\tLoss: {:.4f}, Acc: {:.4f}, Precision: {:.4f}, Recall: {:.4f}, F1 Score: {:.4f}'.format(phase, epoch_loss, epoch_acc, precision, recall, f1_score))
+            print('[{}]\tLoss: {:.4f}, Acc: {:.4f}, Mean Precision: {:.4f}, Mean Recall: {:.4f}, Mean F1 Score: {:.4f}'.format(phase, epoch_loss, epoch_acc, mean_precision, mean_recall, mean_f1_score))
 
             # deep copy the model
-            if phase == 'val' and f1_score > best_f1_score:
-                best_f1_score = f1_score
+            if phase == 'val' and mean_f1_score > best_f1_score:
+                best_f1_score = mean_f1_score
                 best_model_wts = copy.deepcopy(model.state_dict())
-            if phase == 'val':
-                val_acc.append(epoch_acc)
-                val_loss.append(epoch_loss)
-            else:
-                train_acc.append(epoch_acc)
-                train_loss.append(epoch_loss)
 
         print()
 
@@ -167,20 +177,19 @@ def initialize_model(num_classes, feature_extract, use_pretrained=True, model='d
 
     return model_ft, input_size
 
-
 def main():
-    base_fp = "../../data/external/hymenoptera_data"
-
-    num_classes = 2
-    batch_size = 32
-    num_epochs = 50
-    batch_size = 8
-    num_epochs = 5
+    num_classes = 5
+    batch_size = 64
+    num_epochs = 60
     learn_rate = 0.001
     momentum = 0.9
-    feature_extract = True
+    version = 2
+    model = 'efficient'
+    feature_extract = False
 
-    model_ft, input_size = initialize_model(num_classes, feature_extract, use_pretrained=False, model='vision')
+    base_fp = f"../../data/processed/v{version}"
+
+    model_ft, input_size = initialize_model(num_classes, feature_extract, use_pretrained=False, model=model)
 
     data_transforms = {
         'train': transforms.Compose([
@@ -230,7 +239,7 @@ def main():
     criterion = nn.CrossEntropyLoss()
 
     # Train and evaluate
-    model_ft, resp_lst = train_model(model_ft, dataloaders_dict, criterion, optimizer_ft,
+    model_ft, resp_lst = train_model(model_ft, dataloaders_dict, criterion, optimizer_ft, num_classes, 
                                      num_epochs=num_epochs, is_inception=False, device=device)
 
     train_acc = [num.cpu().tolist() for num in resp_lst[0]]
@@ -245,7 +254,7 @@ def main():
     val_f1_score = resp_lst[9]
 
     # torch.save(model_ft.state_dict(), f'../../models/densenet-121_v{version}')
-    torch.save(model_ft.state_dict(), f'../../models/check')
+    torch.save(model_ft.state_dict(), f'../../models/check_{version}_{model}')
 
     res_dict = {
         'train_acc': train_acc,
@@ -266,8 +275,8 @@ def main():
         }
     }
 
-    # with open(f'../../data/processed/v{version}/train_output_v{version}.json', 'w') as file_obj:
-    #     json.dump(res_dict, file_obj)
+    with open(f'{base_fp}/train_output_v{version}.json', 'w') as file_obj:
+        json.dump(res_dict, file_obj)
 
 
 if __name__ == '__main__':

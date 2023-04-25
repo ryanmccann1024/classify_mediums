@@ -79,6 +79,7 @@ def optimize(batch_size, learn_rate, momentum, num_epochs):
             dataloaders_dict,
             criterion,
             optimizer_ft,
+            NUM_CLASSES,
             num_epochs=num_epochs,
             is_inception=False,
             device=device
@@ -107,7 +108,7 @@ def main():
 
     optimizer = BayesianOptimization(f=optimize, pbounds=pbounds, verbose=10, random_state=42)
 
-    optimizer.maximize(n_iter=10, init_points=5)
+    optimizer.maximize(n_iter=100, init_points=10)
 
     # Print params optimized for target
     print(f"target ({ TARGET_VAL }): { -optimizer.max['target'] if MINIMIZE_TARGET else optimizer.max['target'] }")

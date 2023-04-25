@@ -6,12 +6,13 @@ import shutil
 import math
 import json
 import jsonlines
+import random
 from PIL import Image
 from re import sub
 
 import pandas as pd
 
-DATA_FP = '../../data'
+DATA_FP = '/media/sage/FEDORA-WS-L'
 MEDIUMS = ['oil', 'watercolor', 'pastel', 'pencil', 'tempera']
 HEADERS = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) '
                          'Chrome/50.0.2661.102 Safari/537.36'}
@@ -238,12 +239,17 @@ def get_test_images():
     Obtains all the testing images previously used, ensuring they do not make it back into our training dataset.
     """
     res_dict = {'oil': [], 'watercolor': [], 'tempera': [], 'pastel': [], 'pencil': []}
-    # TODO: Only checks v1 as of now
-    des_fp = '../../data/processed/v1/test'
 
-    for medium in os.listdir(des_fp):
-        for image in os.listdir(f'{des_fp}/{medium}'):
-            res_dict[medium].append(image)
+#    des_fp = f'{DATA_FP}/processed/v{VERSION}/test'
+#
+#    for medium in os.listdir(des_fp):
+#        for image in os.listdir(f'{des_fp}/{medium}'):
+#            # Remove image if it is from older (low resolution) dataset
+#            if image[0].islower():
+#                res_dict[medium].append(image)
+#            else:
+#                os.remove(f"{des_fp}/{medium}/{image}"
+#
 
     return res_dict
 
@@ -253,13 +259,13 @@ def patch_images(rotate=False):
     Will split original images into four sub-images (non-overlapping). It will do this with the version provided, and
     create a new version with the patching implemented.
     """
-    root_dir = f'../../data/processed/v{VERSION}/'
+    root_dir = f'{DATA_FP}/processed/v{VERSION}/'
     for data_dir in os.listdir(root_dir):
         data_fp = os.path.join(root_dir, data_dir)
         for medium_dir in os.listdir(data_fp):
             medium_fp = os.path.join(data_fp, medium_dir)
 
-            new_version_fp = f'../../data/processed/v{VERSION + 1}/{data_dir}/{medium_dir}'
+            new_version_fp = f'{DATA_FP}/processed/v{VERSION + 1}/{data_dir}/{medium_dir}'
             if not os.path.exists(f'{new_version_fp}'):
                 create_dir(f'{new_version_fp}')
 
@@ -267,25 +273,25 @@ def patch_images(rotate=False):
                 image = Image.open(os.path.join(medium_fp, image_name))
 
                 width, height = image.size
-                crop_size = (width // 2, height // 2)
+                crop_size = (width // 8, height // 8)
+                
+                for i in range(4):
+                    left = random.randint(0, width - crop_size[0])
+                    top = random.randint(0, height - crop_size[1])
+                    right = left + crop_size[0]
+                    bottom = top + crop_size[1]
 
-                for i in range(2):
-                    for j in range(2):
-                        left = j * crop_size[0]
-                        top = i * crop_size[1]
-                        right = (j + 1) * crop_size[0]
-                        bottom = (i + 1) * crop_size[1]
+                    cropped_image = image.crop((left, top, right, bottom))
 
-                        cropped_image = image.crop((left, top, right, bottom))
-
-                        # Do not rotate testing images (no need)
-                        if rotate and data_dir != 'test':
-                            for angle in range(0, 360, 90):
-                                rotated = cropped_image.rotate(angle, expand=True)
-                                filename = f"{new_version_fp}/{image_name.split('.jpg')[0]}_{i}_{j}_{angle}.jpg"
-                                rotated.save(filename)
-                        else:
-                            cropped_image.save(f"{new_version_fp}/{image_name.split('.jpg')[0]}_{i}_{j}.jpg")
+                    # Do not rotate testing images (no need)
+                    if rotate and data_dir != 'test':
+                        for angle in range(0, 360, 90):
+                            rotated = cropped_image.rotate(angle, expand=True)
+                            filename = f"{new_version_fp}/{image_name.split('.jpg')[0]}_{left}_{top}_{angle}.jpg"
+                            rotated.save(filename)
+                    else:
+                        cropped_image.save(f"{new_version_fp}/{image_name.split('.jpg')[0]}_{left}_{top}.jpg")
+                image.close()
 
 
 def make_data_split():
@@ -295,7 +301,7 @@ def make_data_split():
     # Contains images used in all prior testing datasets
     test_images = get_test_images()
     image_dict = {'oil': [], 'watercolor': [], 'pencil': [], 'tempera': [], 'pastel': []}
-    data_dirs = ['modern_art', 'national_goa', 'metropolitan']
+    data_dirs = ['chicago', 'national_goa', 'metropolitan']
 
     for directory in data_dirs:
         mediums_lst = [medium for medium in os.listdir(f'{DATA_FP}/processed/{directory}')]
@@ -336,8 +342,8 @@ def main():
     """
     Controls this script.
     """
-    # make_data_split()
-    patch_images(rotate=True)
+    make_data_split()
+    # patch_images(rotate=True)
     # handle_national_goa()
 
 

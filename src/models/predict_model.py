@@ -6,6 +6,7 @@ from torchvision import datasets, models, transforms
 import os
 import json
 
+VERSION = 2
 
 def test_model(model, dataloaders, criterion, device=None):
     predicted_labels = []
@@ -50,7 +51,7 @@ def test_model(model, dataloaders, criterion, device=None):
     actual_labels = [int(val) for val in actual_labels]
 
     res_dict = {'predicted': predicted_labels, 'actual': actual_labels}
-    with open('../../data/processed/v1/test_output_v1.json', 'w') as file_obj:
+    with open(f'../../data/processed/v{VERSION}/test_output_v{VERSION}.json', 'w') as file_obj:
         json.dump(res_dict, file_obj)
 
 
@@ -60,26 +61,51 @@ def set_parameter_requires_grad(model, feature_extracting):
             param.requires_grad = False
 
 
-def initialize_model(num_classes, feature_extract, use_pretrained=True):
-    # Specific to Densenet-121 (Not actually sure if it's only for 121 in this block of code)
-    model_ft = models.densenet121(pretrained=use_pretrained)
-    set_parameter_requires_grad(model_ft, feature_extract)
-    num_ftrs = model_ft.classifier.in_features
-    model_ft.classifier = nn.Linear(num_ftrs, num_classes)
+def initialize_model(num_classes, feature_extract, use_pretrained=True, model='densenet-121'):
+    if model == 'densenet-121':
+        model_ft = models.densenet121(pretrained=use_pretrained)
+        set_parameter_requires_grad(model_ft, feature_extract)
+        num_ftrs = model_ft.classifier.in_features
+        model_ft.classifier = nn.Linear(num_ftrs, num_classes)
+        input_size = 224
+    elif model == 'densenet-161':
+        model_ft = models.densenet161(pretrained=use_pretrained)
+        set_parameter_requires_grad(model_ft, feature_extract)
+        num_ftrs = model_ft.classifier.in_features
+        model_ft.classifier = nn.Linear(num_ftrs, num_classes)
+        input_size = 224
+    elif model == 'efficient':
+        # TODO: There are variations of this!
+        model_ft = models.efficientnet_v2_m(pretrained=use_pretrained)
+        set_parameter_requires_grad(model_ft, feature_extract)
+        # Manually printed the model to find this! (Check it)
+        num_ftrs = 1280
+        model_ft.classifier = nn.Linear(num_ftrs, num_classes)
+        input_size = 224
+    elif model == 'vision':
+        # TODO: There are variations of this AS WELL!
+        model_ft = models.vit_b_16(pretrained=use_pretrained)
+        set_parameter_requires_grad(model_ft, feature_extract)
+        # Manually printed the model to find this! (Check it)
+        num_ftrs = 768
+        model_ft.classifier = nn.Linear(num_ftrs, num_classes)
+        input_size = 224
+    else:
+        raise NotImplementedError(f'Model {model} not found')
 
-    return model_ft
+    return model_ft, input_size
 
 
 def main():
-    test_fp = "../../data/external/hymenoptera_data"
+    test_fp = f"../../data/processed/v{VERSION}"
 
     batch_size = 8
-    num_classes = 2
+    num_classes = 5
     feature_extract = False
+    model ='efficient'
 
-    model_ft = initialize_model(num_classes, feature_extract, use_pretrained=False)
-    model_ft.load_state_dict(torch.load('../../models/check'))
-    input_size = 224
+    model_ft, input_size = initialize_model(num_classes, feature_extract, use_pretrained=False, model=model)
+    model_ft.load_state_dict(torch.load(f'../../models/check_{VERSION}_{model}'))
 
     data_transforms = {
         'test': transforms.Compose([
